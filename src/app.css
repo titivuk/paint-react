@@ -1,0 +1,6 @@
+.canvas {
+	margin:auto;
+	display: flex;
+	flex-direction: column;
+	border-style: solid;
+}
