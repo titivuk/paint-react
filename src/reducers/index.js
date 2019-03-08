@@ -1,7 +1,9 @@
 import { combineReducers } from 'redux';
-import clearCanvas from './clear.canvas';
-// import counter from './counter';
+
+import paintColor from './paint.color.reducer';
+import clearCanvas from './clear.canvas.reducer';
 
 export default combineReducers({
-	clearCanvas,
+	paintColor,
+	isCanvasClear: clearCanvas,
 });

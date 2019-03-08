@@ -2,16 +2,16 @@ import React from 'react';
 
 import './app.css';
 
-import CanvasComponent from './components/canvas.component';
-import HeaderComponent from './components/header.component';
+import CanvasContainer from './containers/canvas.container';
+import HeaderContainer from './containers/header.container';
 
 
 class App extends React.Component {
 	render() {
 		return (
 			<div className="App">
-				<HeaderComponent />
-				<CanvasComponent canvasSize={500} />
+				<HeaderContainer />
+				<CanvasContainer canvasSize={500} />
 			</div>
 		);
 	}

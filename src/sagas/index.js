@@ -1,8 +1,9 @@
-import clearCanvasWatcher from './clear.canvas';
+import { all, call } from 'redux-saga/effects'
+import clearCanvas from './clear.canvas';
 
 
 export default function* rootSaga() {
-	yield [
-		clearCanvasWatcher()
-	];
+	yield all([
+		call(clearCanvas)
+	]);
 };
