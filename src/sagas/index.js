@@ -1,8 +1,8 @@
-import throttleClearCanvas from './clear.canvas';
+import clearCanvasWatcher from './clear.canvas';
 
 
 export default function* rootSaga() {
 	yield [
-		throttleClearCanvas()
+		clearCanvasWatcher()
 	];
 };

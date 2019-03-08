@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "babel-polyfill": "^6.26.0",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
     "react-redux": "^6.0.1",
@@ -25,6 +26,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "@babel/core": "^7.3.4"
+    "@babel/core": "^7.3.4",
+    "redux-devtools-extension": "^2.13.8"
   }
 }
