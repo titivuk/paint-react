@@ -3,8 +3,10 @@ import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 
 import { FILL_CANVAS } from '../constants/actions';
+import { PAINT_TOOLS } from '../constants/constants';
 
 
+// TODO: refactoring, duplicated method, probably create canvas service with static methods
 class CanvasContainer extends React.PureComponent {
 
 
@@ -86,10 +88,18 @@ class CanvasContainer extends React.PureComponent {
 
 
 	moveFigureFromCatcherToCanvas() {
-		const { type, properties } = this.canvasCatcherFigure;
+		const { canvasCatcherFigure } = this;
 
-		switch (type) {
-			case 'circle':
+		if (!canvasCatcherFigure || !canvasCatcherFigure.properties) {
+			return;
+		}
+
+		const { properties } = this.canvasCatcherFigure;
+		const { paintToolKey } = this.props;
+		const paintTool = PAINT_TOOLS[paintToolKey];
+
+		switch (paintTool) {
+			case PAINT_TOOLS.CIRCLE:
 				this.moveCircleFromCatcherToCanvas(properties);
 				break;
 			default:
@@ -109,6 +119,23 @@ class CanvasContainer extends React.PureComponent {
 
 
 	paint() {
+		const { paintToolKey } = this.props;
+		const paintTool = PAINT_TOOLS[paintToolKey];
+
+		switch (paintTool) {
+			case PAINT_TOOLS.CIRCLE:
+				this.paintCirlce();
+				break;
+			case PAINT_TOOLS.PEN:
+				this.paintPen();
+				break;
+			default:
+				break;
+		}
+	}
+
+
+	paintCirlce() {
 		const { x: mouseDownX, y: mouseDownY } = this.mouseDownPosition;
 		const { x: currX, y: currY } = this.currentPosition;
 
@@ -128,32 +155,34 @@ class CanvasContainer extends React.PureComponent {
 					centerY,
 					r
 				},
-				type: 'circle',
 			}
 		}
+	}
 
-		// if (this.currentPosition === null) {
-		// 	return;
-		// }
 
-		// const { x: currentX, y: currentY } = this.currentPosition;
-		// const { x: prevX, y: prevY } = this.prevPosition || {};
+	paintPen() {
+		if (this.currentPosition === null) {
+			return;
+		}
 
-		// /**
-		//  * if u just put the mark then draw point as rectangle
-		//  * else connect prev and current coordinates with line
-		//  */
-		// if (!Number.isInteger(prevX) || !Number.isInteger(prevY)) {
-		// 	this.ctx.fillRect(currentX, currentY, 5, 5);
-		// } else {
-		// 	this.ctx.beginPath();
-		// 	// Move the the prevPosition of the mouse
-		// 	this.ctx.moveTo(prevX, prevY);
-		// 	// Draw a line to the current position of the mouse
-		// 	this.ctx.lineTo(currentX, currentY);
-		// 	// Visualize the line using the strokeStyle
-		// 	this.ctx.stroke();
-		// }
+		const { x: currentX, y: currentY } = this.currentPosition;
+		const { x: prevX, y: prevY } = this.prevPosition || {};
+
+		/**
+		 * if u just put the mark then draw point as rectangle
+		 * else connect prev and current coordinates with line
+		 */
+		if (!Number.isInteger(prevX) || !Number.isInteger(prevY)) {
+			this.ctx.fillRect(currentX, currentY, 5, 5);
+		} else {
+			this.ctx.beginPath();
+			// Move the the prevPosition of the mouse
+			this.ctx.moveTo(prevX, prevY);
+			// Draw a line to the current position of the mouse
+			this.ctx.lineTo(currentX, currentY);
+			// Visualize the line using the strokeStyle
+			this.ctx.stroke();
+		}
 	}
 
 
@@ -172,6 +201,21 @@ class CanvasContainer extends React.PureComponent {
 	}
 
 
+	updateCanvasCatcherColorBrush() {
+		if (this.ctxCatcher) {
+			const { paintColor } = this.props;
+
+			this.ctxCatcher.strokeStyle = paintColor;
+
+			/**
+			 * update fillStyle to because we draw dot as a rectangle.
+			 * TODO: fix it
+			 */
+			this.ctxCatcher.fillStyle = paintColor;
+		}
+	}
+
+
 	clearCanvas() {
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 	}
@@ -180,6 +224,7 @@ class CanvasContainer extends React.PureComponent {
 	componentDidUpdate(prevProps) {
 		if (prevProps.paintColor !== this.props.paintColor) {
 			this.updateCanvasColorBrush();
+			this.updateCanvasCatcherColorBrush();
 		}
 
 		if (this.props.isCanvasClear) {
@@ -193,7 +238,7 @@ class CanvasContainer extends React.PureComponent {
 		this.ctx.canvas.width = 1000;
 		this.ctx.canvas.height = 600;
 		// https://developer.mozilla.org/ru/docs/Web/API/CanvasRenderingContext2D/lineJoin
-		this.ctx.lineJoin = 'bevel';
+		this.ctx.lineJoin = 'round';
 		// https://developer.mozilla.org/ru/docs/Web/API/CanvasRenderingContext2D/lineCap
 		this.ctx.lineCap = 'butt';
 		this.ctx.lineWidth = 5;
@@ -202,7 +247,7 @@ class CanvasContainer extends React.PureComponent {
 		this.ctxCatcher.canvas.width = 1000;
 		this.ctxCatcher.canvas.height = 600;
 		// https://developer.mozilla.org/ru/docs/Web/API/CanvasRenderingContext2D/lineJoin
-		this.ctxCatcher.lineJoin = 'bevel';
+		this.ctxCatcher.lineJoin = 'round';
 		// https://developer.mozilla.org/ru/docs/Web/API/CanvasRenderingContext2D/lineCap
 		this.ctxCatcher.lineCap = 'butt';
 		this.ctxCatcher.lineWidth = 5;
@@ -212,7 +257,6 @@ class CanvasContainer extends React.PureComponent {
 
 	render() {
 		return (
-			// <div className="canvas-wrapper">
 			<>
 				<canvas className='canvas'
 					onMouseDown={this.onMouseDownEvent}
@@ -237,8 +281,9 @@ class CanvasContainer extends React.PureComponent {
 
 
 CanvasContainer.propTypes = {
-	paintColor: PropTypes.string.isRequired,
 	isCanvasClear: PropTypes.bool.isRequired,
+	paintColor: PropTypes.string.isRequired,
+	paintToolKey: PropTypes.string.isRequired,
 };
 
 CanvasContainer.defaultProps = {
@@ -248,8 +293,9 @@ CanvasContainer.defaultProps = {
 
 export default connect(
 	(state) => ({
-		paintColor: state.paintColor,
 		isCanvasClear: state.isCanvasClear,
+		paintColor: state.paintColor,
+		paintToolKey: state.paintToolKey,
 	}),
 )(CanvasContainer);
 
