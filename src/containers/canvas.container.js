@@ -3,16 +3,24 @@ import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 
 import { FILL_CANVAS } from '../constants/actions';
+import { PAINT_TOOLS } from '../constants/constants';
 
 
+// TODO: refactoring, duplicated method, probably create canvas service with static methods
 class CanvasContainer extends React.PureComponent {
 
 
 	painting = false;
 	currentPosition = null;
 	prevPosition = null;
+	mouseDownPosition = null;
+
 	canvas = null;
+	canvasCatcher = null;
+
 	ctx = null;
+	ctxCatcher = null;
+	canvasCatcherFigure = null;
 
 
 	onMouseDownEvent = (e) => {
@@ -27,6 +35,9 @@ class CanvasContainer extends React.PureComponent {
 
 			this.painting = true;
 			this.currentPosition = {
+				x: offsetX, y: offsetY
+			};
+			this.mouseDownPosition = {
 				x: offsetX, y: offsetY
 			};
 
@@ -56,6 +67,7 @@ class CanvasContainer extends React.PureComponent {
 
 
 	onMouseUpEvent = () => {
+		this.moveFigureFromCatcherToCanvas();
 		this.stopPainting();
 	};
 
@@ -75,7 +87,80 @@ class CanvasContainer extends React.PureComponent {
 	}
 
 
+	moveFigureFromCatcherToCanvas() {
+		const { canvasCatcherFigure } = this;
+
+		if (!canvasCatcherFigure || !canvasCatcherFigure.properties) {
+			return;
+		}
+
+		const { properties } = this.canvasCatcherFigure;
+		const { paintToolKey } = this.props;
+		const paintTool = PAINT_TOOLS[paintToolKey];
+
+		switch (paintTool) {
+			case PAINT_TOOLS.CIRCLE:
+				this.moveCircleFromCatcherToCanvas(properties);
+				break;
+			default:
+				break;
+		}
+	}
+
+
+	moveCircleFromCatcherToCanvas({ centerX, centerY, r }) {
+		this.ctx.beginPath();
+		this.ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
+		this.ctx.stroke();
+
+		// clear catcher canvas
+		this.ctxCatcher.clearRect(0, 0, this.canvasCatcher.width, this.canvasCatcher.height);
+	}
+
+
 	paint() {
+		const { paintToolKey } = this.props;
+		const paintTool = PAINT_TOOLS[paintToolKey];
+
+		switch (paintTool) {
+			case PAINT_TOOLS.CIRCLE:
+				this.paintCirlce();
+				break;
+			case PAINT_TOOLS.PEN:
+				this.paintPen();
+				break;
+			default:
+				break;
+		}
+	}
+
+
+	paintCirlce() {
+		const { x: mouseDownX, y: mouseDownY } = this.mouseDownPosition;
+		const { x: currX, y: currY } = this.currentPosition;
+
+		const centerX = (currX + mouseDownX) / 2;
+		const centerY = (currY + mouseDownY) / 2;
+		const r = Math.sqrt(Math.abs(mouseDownX - centerX) ** 2 + Math.abs(mouseDownY - centerY) ** 2);
+
+		if (r > 0) {
+			this.ctxCatcher.clearRect(0, 0, this.canvasCatcher.width, this.canvasCatcher.height);
+			this.ctxCatcher.beginPath();
+			this.ctxCatcher.arc(centerX, centerY, r, 0, 2 * Math.PI);
+			this.ctxCatcher.stroke();
+
+			this.canvasCatcherFigure = {
+				properties: {
+					centerX,
+					centerY,
+					r
+				},
+			}
+		}
+	}
+
+
+	paintPen() {
 		if (this.currentPosition === null) {
 			return;
 		}
@@ -116,6 +201,21 @@ class CanvasContainer extends React.PureComponent {
 	}
 
 
+	updateCanvasCatcherColorBrush() {
+		if (this.ctxCatcher) {
+			const { paintColor } = this.props;
+
+			this.ctxCatcher.strokeStyle = paintColor;
+
+			/**
+			 * update fillStyle to because we draw dot as a rectangle.
+			 * TODO: fix it
+			 */
+			this.ctxCatcher.fillStyle = paintColor;
+		}
+	}
+
+
 	clearCanvas() {
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 	}
@@ -124,6 +224,7 @@ class CanvasContainer extends React.PureComponent {
 	componentDidUpdate(prevProps) {
 		if (prevProps.paintColor !== this.props.paintColor) {
 			this.updateCanvasColorBrush();
+			this.updateCanvasCatcherColorBrush();
 		}
 
 		if (this.props.isCanvasClear) {
@@ -136,21 +237,41 @@ class CanvasContainer extends React.PureComponent {
 		this.ctx = this.canvas.getContext('2d');
 		this.ctx.canvas.width = 1000;
 		this.ctx.canvas.height = 600;
+		// https://developer.mozilla.org/ru/docs/Web/API/CanvasRenderingContext2D/lineJoin
 		this.ctx.lineJoin = 'round';
-		this.ctx.lineCap = 'round';
+		// https://developer.mozilla.org/ru/docs/Web/API/CanvasRenderingContext2D/lineCap
+		this.ctx.lineCap = 'butt';
 		this.ctx.lineWidth = 5;
+
+		this.ctxCatcher = this.canvasCatcher.getContext('2d');
+		this.ctxCatcher.canvas.width = 1000;
+		this.ctxCatcher.canvas.height = 600;
+		// https://developer.mozilla.org/ru/docs/Web/API/CanvasRenderingContext2D/lineJoin
+		this.ctxCatcher.lineJoin = 'round';
+		// https://developer.mozilla.org/ru/docs/Web/API/CanvasRenderingContext2D/lineCap
+		this.ctxCatcher.lineCap = 'butt';
+		this.ctxCatcher.lineWidth = 5;
 	}
 
 
 	render() {
 		return (
-			<canvas className='canvas'
-				onMouseDown={this.onMouseDownEvent}
-				onMouseLeave={this.onMouseLeaveEvent}
-				onMouseMove={this.onMouseMoveEvent}
-				onMouseUp={this.onMouseUpEvent}
-				ref={(ref) => (this.canvas = ref)}
-			/>
+			<>
+				<canvas className='canvas'
+					onMouseDown={this.onMouseDownEvent}
+					onMouseLeave={this.onMouseLeaveEvent}
+					onMouseMove={this.onMouseMoveEvent}
+					onMouseUp={this.onMouseUpEvent}
+					ref={(ref) => (this.canvas = ref)}
+				/>
+				<canvas className='canvas canvas-catcher'
+					onMouseDown={this.onMouseDownEvent}
+					onMouseLeave={this.onMouseLeaveEvent}
+					onMouseMove={this.onMouseMoveEvent}
+					onMouseUp={this.onMouseUpEvent}
+					ref={(ref) => (this.canvasCatcher = ref)}
+				/>
+			</>
 		);
 	}
 
@@ -159,8 +280,9 @@ class CanvasContainer extends React.PureComponent {
 
 
 CanvasContainer.propTypes = {
-	paintColor: PropTypes.string.isRequired,
 	isCanvasClear: PropTypes.bool.isRequired,
+	paintColor: PropTypes.string.isRequired,
+	paintToolKey: PropTypes.string.isRequired,
 };
 
 CanvasContainer.defaultProps = {
@@ -170,8 +292,9 @@ CanvasContainer.defaultProps = {
 
 export default connect(
 	(state) => ({
-		paintColor: state.paintColor,
 		isCanvasClear: state.isCanvasClear,
+		paintColor: state.paintColor,
+		paintToolKey: state.paintToolKey,
 	}),
 )(CanvasContainer);
 
