@@ -123,9 +123,9 @@ class CanvasContainer extends React.PureComponent {
 	}
 
 
-	moveCircleFromCatcherToCanvas({ centerX, centerY, r }) {
+	moveCircleFromCatcherToCanvas({ x, y, r }) {
 		this.ctx.beginPath();
-		this.ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
+		this.ctx.arc(x, y, r, 0, 2 * Math.PI);
 		this.ctx.stroke();
 
 		// clear catcher canvas
